@@ -41,11 +41,13 @@ func IsSCMOrigin(origin string) bool {
 }
 
 // OriginToIntegrationKey maps a project origin to the integration key
-// used by ListIntegrations. Most are 1:1, except bitbucket-connect-app
-// which maps to bitbucket-cloud.
+// used by ListIntegrations. Most are 1:1. The Snyk API uses
+// "bitbucket-connect-app" as the key for the Bitbucket Cloud App
+// (OAuth) integration; "bitbucket-cloud-app" is a CLI alias for the
+// same thing. "bitbucket-cloud" is a separate Basic-Auth integration.
 func OriginToIntegrationKey(origin string) string {
-	if origin == "bitbucket-connect-app" {
-		return "bitbucket-cloud"
+	if origin == "bitbucket-cloud-app" {
+		return "bitbucket-connect-app"
 	}
 	return origin
 }
