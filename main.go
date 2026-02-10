@@ -48,10 +48,10 @@ func main() {
 			runDedup(os.Args[2:])
 			return
 		case "--version", "-version":
-fmt.Printf("snyk-target-export %s (commit: %s, built: %s)\n", version, commit, date)
-		return
+			fmt.Printf("snyk-target-export %s (commit: %s, built: %s)\n", version, commit, date)
+			return
+		}
 	}
-}
 	runRefresh(os.Args[1:])
 }
 
