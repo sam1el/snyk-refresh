@@ -1,5 +1,5 @@
-// snyk-refresh discovers all existing SCM targets in a Snyk group and writes
-// a refresh-import-targets.json file that snyk-api-import can consume to
+// snyk-target-export discovers all existing SCM targets in a Snyk group and writes
+// an export-targets.json file that snyk-api-import can consume to
 // re-import those targets (e.g. to add SCA scanning to existing Snyk Code projects).
 //
 // No SCM credentials required -- only SNYK_TOKEN.
@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sam1el/snyk-refresh/internal"
+	"github.com/snyk-playground/snyk-target-export/internal"
 )
 
 // Set by GoReleaser ldflags at build time.
@@ -48,10 +48,10 @@ func main() {
 			runDedup(os.Args[2:])
 			return
 		case "--version", "-version":
-			fmt.Printf("snyk-refresh %s (commit: %s, built: %s)\n", version, commit, date)
-			return
-		}
+fmt.Printf("snyk-target-export %s (commit: %s, built: %s)\n", version, commit, date)
+		return
 	}
+}
 	runRefresh(os.Args[1:])
 }
 
@@ -63,13 +63,13 @@ func runRefresh(args []string) {
 	orgID := fs.String("orgId", "", "Single Snyk org ID to scan (alternative to --groupId)")
 	integrationType := fs.String("integrationType", "", "Filter to a specific integration type (e.g. github-cloud-app)")
 	concurrency := fs.Int("concurrency", 5, "Number of orgs to process in parallel")
-	output := fs.String("output", "refresh-import-targets.json", "Output file path")
+	output := fs.String("output", "export-targets.json", "Output file path")
 	if err := fs.Parse(args); err != nil {
 		os.Exit(1)
 	}
 
 	if *showVersion {
-		fmt.Printf("snyk-refresh %s (commit: %s, built: %s)\n", version, commit, date)
+		fmt.Printf("snyk-target-export %s (commit: %s, built: %s)\n", version, commit, date)
 		os.Exit(0)
 	}
 

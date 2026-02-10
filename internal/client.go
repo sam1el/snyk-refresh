@@ -1,5 +1,5 @@
 // Package internal provides the Snyk API client, rate limiting, and retry
-// logic for the snyk-refresh CLI.
+// logic for the snyk-target-export CLI.
 package internal
 
 import (

@@ -34,23 +34,23 @@ jobs:
         run: go vet ./...
 
       - name: Build
-        run: go build -o snyk-refresh .
+        run: go build -o snyk-target-export .
 
       - name: Run tests
         run: go test ./... -v -race
 
       - name: Verify help output
-        run: ./snyk-refresh --help
+        run: ./snyk-target-export --help
 
       - name: Verify flag validation
         run: |
           # Should fail without required flags
-          if ./snyk-refresh 2>/dev/null; then
+          if ./snyk-target-export 2>/dev/null; then
             echo "Expected failure without --groupId or --orgId"
             exit 1
           fi
           # Should fail with both flags
-          if ./snyk-refresh --groupId=test --orgId=test 2>/dev/null; then
+          if ./snyk-target-export --groupId=test --orgId=test 2>/dev/null; then
             echo "Expected failure with both --groupId and --orgId"
             exit 1
           fi
@@ -93,5 +93,5 @@ jobs:
         run: |
           ext=""
           if [ "$GOOS" = "windows" ]; then ext=".exe"; fi
-          go build -o snyk-refresh-${GOOS}-${GOARCH}${ext} .
-          echo "Built snyk-refresh-${GOOS}-${GOARCH}${ext}"
+          go build -o snyk-target-export-${GOOS}-${GOARCH}${ext} .
+          echo "Built snyk-target-export-${GOOS}-${GOARCH}${ext}"

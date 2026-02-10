@@ -1,6 +1,6 @@
 version: 2
 
-project_name: snyk-refresh
+project_name: snyk-target-export
 
 before:
   hooks:
@@ -8,9 +8,9 @@ before:
     - go vet ./...
 
 builds:
-  - id: snyk-refresh
+  - id: snyk-target-export
     main: .
-    binary: snyk-refresh
+    binary: snyk-target-export
     env:
       - CGO_ENABLED=0
     goos:
@@ -52,7 +52,7 @@ changelog:
 
 release:
   github:
-    owner: sam1el
-    name: snyk-refresh
+    owner: snyk-playground
+    name: snyk-target-export
   prerelease: auto
   name_template: "{{.Tag}}"

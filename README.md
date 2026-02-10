@@ -1,8 +1,8 @@
-# snyk-refresh
+# snyk-target-export
 
 Generate an import targets file from your existing Snyk projects so you can re-import them with [snyk-api-import](https://github.com/snyk/snyk-api-import). This is useful when you need to add a new Snyk product (e.g. SCA) to projects that were originally imported for a different product (e.g. Snyk Code).
 
-`snyk-refresh` scans all organizations in a Snyk group, discovers every SCM target that already exists, and writes a `refresh-import-targets.json` file. You then feed that file to `snyk-api-import import` to trigger the re-import.
+`snyk-target-export` scans all organizations in a Snyk group, discovers every SCM target that already exists, and writes a `export-targets.json` file. You then feed that file to `snyk-api-import import` to trigger the re-import.
 
 No SCM credentials are required. The tool only communicates with Snyk APIs using your `SNYK_TOKEN`.
 
@@ -12,26 +12,26 @@ No SCM credentials are required. The tool only communicates with Snyk APIs using
 export SNYK_TOKEN=<your-snyk-api-token>
 
 # 1. Generate the import targets file
-./snyk-refresh --groupId=<your-group-id>
+./snyk-target-export --groupId=<your-group-id>
 
 # 2. Review the output
-cat refresh-import-targets.json
+cat export-targets.json
 
 # 3. Import via snyk-api-import
-snyk-api-import import --file=refresh-import-targets.json
+snyk-api-import import --file=export-targets.json
 ```
 
 ## Installation
 
 ### Download a release
 
-Download the binary for your platform from the [Releases](https://github.com/sam1el/snyk-refresh/releases) page. Archives are available for Linux, macOS, and Windows on both amd64 and arm64 architectures.
+Download the binary for your platform from the [Releases](https://github.com/snyk-playground/snyk-target-export/releases) page. Archives are available for Linux, macOS, and Windows on both amd64 and arm64 architectures.
 
 ### Build from source
 
 ```bash
-git clone https://github.com/sam1el/snyk-refresh.git
-cd snyk-refresh
+git clone https://github.com/snyk-playground/snyk-target-export.git
+cd snyk-target-export
 make build
 ```
 
@@ -57,13 +57,13 @@ The `Makefile` includes several useful targets:
 ### Scan all organizations in a group
 
 ```bash
-./snyk-refresh --groupId=<your-group-id>
+./snyk-target-export --groupId=<your-group-id>
 ```
 
 ### Scan a single organization
 
 ```bash
-./snyk-refresh --orgId=<your-org-id>
+./snyk-target-export --orgId=<your-org-id>
 ```
 
 ### Filter to a specific integration type
@@ -71,7 +71,7 @@ The `Makefile` includes several useful targets:
 Only include targets from a particular SCM integration:
 
 ```bash
-./snyk-refresh --groupId=<your-group-id> --integrationType=github-cloud-app
+./snyk-target-export --groupId=<your-group-id> --integrationType=github-cloud-app
 ```
 
 ### Control concurrency
@@ -79,19 +79,19 @@ Only include targets from a particular SCM integration:
 Adjust how many organizations are processed in parallel (default: 5):
 
 ```bash
-./snyk-refresh --groupId=<your-group-id> --concurrency=10
+./snyk-target-export --groupId=<your-group-id> --concurrency=10
 ```
 
 ### Write output to a custom location
 
 ```bash
-./snyk-refresh --groupId=<your-group-id> --output=/path/to/targets.json
+./snyk-target-export --groupId=<your-group-id> --output=/path/to/targets.json
 ```
 
 ### Check the version
 
 ```bash
-./snyk-refresh --version
+./snyk-target-export --version
 ```
 
 ## Options
@@ -102,7 +102,7 @@ Adjust how many organizations are processed in parallel (default: 5):
 | `--orgId` | One of groupId or orgId | | Single Snyk org ID to scan. |
 | `--integrationType` | No | all types | Filter to a specific integration type (e.g. `github-cloud-app`). |
 | `--concurrency` | No | `5` | Number of organizations to process in parallel. |
-| `--output` | No | `refresh-import-targets.json` | Output file path. |
+| `--output` | No | `export-targets.json` | Output file path. |
 | `--version` | No | | Print version information and exit. |
 
 ## Environment Variables
@@ -163,7 +163,7 @@ When a project has no custom branch set, the import will use the repository's de
 
 ## Dedup: Remove Duplicate Projects
 
-If a re-import creates duplicate projects (or duplicate targets from different integrations), `snyk-refresh dedup` can find and remove them. By default it runs in dry-run mode (lists duplicates without deleting). Pass `--delete` to actually remove them.
+If a re-import creates duplicate projects (or duplicate targets from different integrations), `snyk-target-export dedup` can find and remove them. By default it runs in dry-run mode (lists duplicates without deleting). Pass `--delete` to actually remove them.
 
 The dedup command performs two phases of cleanup:
 
@@ -173,19 +173,19 @@ The dedup command performs two phases of cleanup:
 ### Find duplicates (dry-run)
 
 ```bash
-./snyk-refresh dedup --groupId=<your-group-id>
+./snyk-target-export dedup --groupId=<your-group-id>
 ```
 
 ### Find duplicates in a single org
 
 ```bash
-./snyk-refresh dedup --orgId=<your-org-id>
+./snyk-target-export dedup --orgId=<your-org-id>
 ```
 
 ### Delete duplicates
 
 ```bash
-./snyk-refresh dedup --groupId=<your-group-id> --delete
+./snyk-target-export dedup --groupId=<your-group-id> --delete
 ```
 
 ### Dedup Options
@@ -220,13 +220,13 @@ Run with --delete to remove them.
 export SNYK_TOKEN=<your-snyk-api-token>
 
 # Step 1: Discover all existing targets
-./snyk-refresh --groupId=<your-group-id>
+./snyk-target-export --groupId=<your-group-id>
 
 # Step 2: Review the file
-# (check refresh-import-targets.json to confirm targets look correct)
+# (check export-targets.json to confirm targets look correct)
 
 # Step 3: Re-import to trigger SCA scanning
-snyk-api-import import --file=refresh-import-targets.json
+snyk-api-import import --file=export-targets.json
 ```
 
 ## Releasing
@@ -242,4 +242,4 @@ The [Release workflow](.github/workflows/release.yml) will build binaries for al
 
 ## License
 
-Apache-2.0
+MIT

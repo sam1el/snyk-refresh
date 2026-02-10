@@ -1,12 +1,12 @@
 # Binary
-snyk-refresh
-snyk-refresh.exe
+snyk-target-export
+snyk-target-export.exe
 
 # GoReleaser
 dist/
 
 # Output files
-refresh-import-targets.json
+export-targets.json
 
 # OS files
 .DS_Store
@@ -17,3 +17,6 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Snyk Security Extension - AI Rules (auto-generated)
+.cursor/rules/snyk_rules.mdc
