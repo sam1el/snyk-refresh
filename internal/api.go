@@ -25,6 +25,7 @@ type Project struct {
 	TargetReference string
 	Created         string // ISO 8601 timestamp from Snyk API
 	TargetID        string // Snyk target ID from relationships
+	Status          string // "active" or "inactive"; empty is treated as active
 }
 
 // FetchOrgs fetches all organizations in a Snyk group, handling pagination.
@@ -162,6 +163,7 @@ func FetchProjects(ctx context.Context, client *http.Client, token, orgID string
 			name, _ := attrs["name"].(string)
 			origin, _ := attrs["origin"].(string)
 			created, _ := attrs["created"].(string)
+			status, _ := attrs["status"].(string)
 
 			// Extract branch: prefer targetReference, fall back to branch
 			targetRef, _ := attrs["targetReference"].(string)
@@ -191,6 +193,7 @@ func FetchProjects(ctx context.Context, client *http.Client, token, orgID string
 				TargetReference: targetRef,
 				Created:         created,
 				TargetID:        targetID,
+				Status:          status,
 			})
 		}
 

@@ -74,6 +74,7 @@ The default behavior is **refresh**: discover SCM targets and write `export-targ
 | Export all orgs in a group | `./snyk-target-export --groupId=<your-group-id>` |
 | Export a single org only | `./snyk-target-export --orgId=<your-org-id>` |
 | Only GitHub Cloud App targets | `./snyk-target-export --groupId=<your-group-id> --integrationType=github-cloud-app` |
+| Skip targets with only inactive projects | `./snyk-target-export --groupId=<your-group-id> --skipInactiveTargets` |
 | Custom output file | `./snyk-target-export --groupId=<your-group-id> --output=/path/to/targets.json` |
 | More parallel orgs (default 5) | `./snyk-target-export --groupId=<your-group-id> --concurrency=10` |
 
@@ -84,6 +85,7 @@ The default behavior is **refresh**: discover SCM targets and write `export-targ
 | `--groupId` | One of groupId or orgId | | Snyk group ID. All orgs in this group will be scanned. |
 | `--orgId` | One of groupId or orgId | | Single Snyk org ID to scan. |
 | `--integrationType` | No | all types | Filter to a specific integration type (e.g. `github-cloud-app`). |
+| `--skipInactiveTargets` | No | `false` | Omit targets where every associated project has status `inactive`. Targets with at least one active project (or unknown status) are always included. |
 | `--concurrency` | No | `5` | Number of organizations to process in parallel. |
 | `--output` | No | `export-targets.json` | Output file path. |
 | `--version` | No | | Print version and exit. |
