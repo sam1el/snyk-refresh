@@ -8,7 +8,8 @@
         "name": "example-org/repo-a(main):Dockerfile",
         "target_reference": "main",
         "origin": "github-enterprise",
-        "created": "2026-02-01T12:00:00.000Z"
+        "created": "2026-02-01T12:00:00.000Z",
+        "status": "active"
       },
       "relationships": {
         "target": {
@@ -23,7 +24,8 @@
         "name": "example-org/repo-a(main):requirements.txt",
         "target_reference": "main",
         "origin": "github-enterprise",
-        "created": "2026-01-15T14:30:00.000Z"
+        "created": "2026-01-15T14:30:00.000Z",
+        "status": "inactive"
       },
       "relationships": {
         "target": {
@@ -38,7 +40,8 @@
         "name": "example-org/demo-app(master):terraform/main.tf",
         "target_reference": "master",
         "origin": "github",
-        "created": "2024-05-10T10:00:00.000Z"
+        "created": "2024-05-10T10:00:00.000Z",
+        "status": "active"
       },
       "relationships": {
         "target": {
@@ -53,7 +56,8 @@
         "name": "example-org/app-dvja(master)",
         "target_reference": "master",
         "origin": "bitbucket-connect-app",
-        "created": "2023-09-05T11:00:00.000Z"
+        "created": "2023-09-05T11:00:00.000Z",
+        "status": "active"
       },
       "relationships": {
         "target": {

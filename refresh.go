@@ -30,21 +30,30 @@ type RefreshOutput struct {
 
 // refreshOrgResult holds the result of processing one org for the refresh command.
 type refreshOrgResult struct {
-	targets     []internal.ImportTarget
-	orgMeta     map[string]OrgMeta
-	intMeta     map[string]string
-	gitlabCount int
-	err         error
-	orgID       string
-	orgLabel    string
+	targets        []internal.ImportTarget
+	orgMeta        map[string]OrgMeta
+	intMeta        map[string]string
+	gitlabCount    int
+	inactiveSkipped int
+	err            error
+	orgID          string
+	orgLabel       string
 }
 
 // projectsToImportTargets converts Snyk projects to import targets for the given org,
-// applying SCM filtering, integration-type filter, and deduplication. Returns targets and gitlab skipped count.
-func projectsToImportTargets(org internal.Org, projects []internal.Project, integrations map[string]string, integrationType string) ([]internal.ImportTarget, int) {
-	var targets []internal.ImportTarget
-	seen := make(map[string]bool)
+// applying SCM filtering, integration-type filter, and deduplication. When
+// skipInactiveTargets is true, any target whose every project has status "inactive"
+// is omitted. A missing or empty status is treated as active (safe default).
+// Returns targets, gitlab skipped count, and inactive-only skipped count.
+func projectsToImportTargets(org internal.Org, projects []internal.Project, integrations map[string]string, integrationType string, skipInactiveTargets bool) ([]internal.ImportTarget, int, int) {
 	gitlabSkipped := 0
+
+	type targetEntry struct {
+		target           internal.ImportTarget
+		hasActiveProject bool
+	}
+	targetMap := make(map[string]*targetEntry)
+	var targetOrder []string // preserve first-seen insertion order for deterministic output
 
 	for _, p := range projects {
 		if p.Origin == "gitlab" {
@@ -71,21 +80,36 @@ func projectsToImportTargets(org internal.Org, projects []internal.Project, inte
 			continue
 		}
 		tid := internal.TargetID(org.ID, integrationID, target)
-		if seen[tid] {
+		if _, exists := targetMap[tid]; !exists {
+			targetMap[tid] = &targetEntry{
+				target: internal.ImportTarget{
+					Target:        target,
+					OrgID:         org.ID,
+					IntegrationID: integrationID,
+				},
+			}
+			targetOrder = append(targetOrder, tid)
+		}
+		if p.Status != "inactive" {
+			targetMap[tid].hasActiveProject = true
+		}
+	}
+
+	var targets []internal.ImportTarget
+	inactiveSkipped := 0
+	for _, tid := range targetOrder {
+		entry := targetMap[tid]
+		if skipInactiveTargets && !entry.hasActiveProject {
+			inactiveSkipped++
 			continue
 		}
-		seen[tid] = true
-		targets = append(targets, internal.ImportTarget{
-			Target:        target,
-			OrgID:         org.ID,
-			IntegrationID: integrationID,
-		})
+		targets = append(targets, entry.target)
 	}
-	return targets, gitlabSkipped
+	return targets, gitlabSkipped, inactiveSkipped
 }
 
 // processOrgForRefresh fetches integrations and projects for one org and converts projects to import targets.
-func processOrgForRefresh(ctx context.Context, api SnykAPI, org internal.Org, integrationType string) refreshOrgResult {
+func processOrgForRefresh(ctx context.Context, api SnykAPI, org internal.Org, integrationType string, skipInactiveTargets bool) refreshOrgResult {
 	res := refreshOrgResult{
 		orgID:    org.ID,
 		orgLabel: orgLabel(org),
@@ -125,7 +149,7 @@ func processOrgForRefresh(ctx context.Context, api SnykAPI, org internal.Org, in
 		return res
 	}
 
-	res.targets, res.gitlabCount = projectsToImportTargets(org, projects, integrations, integrationType)
+	res.targets, res.gitlabCount, res.inactiveSkipped = projectsToImportTargets(org, projects, integrations, integrationType, skipInactiveTargets)
 	return res
 }
 
@@ -138,9 +162,12 @@ func mergeRefreshResult(out *RefreshOutput, res refreshOrgResult) {
 		log.Printf("WARNING: Org %s: skipping %d GitLab project(s) -- Snyk API does not provide numeric GitLab project ID required for re-import",
 			res.orgLabel, res.gitlabCount)
 	}
+	if res.inactiveSkipped > 0 {
+		log.Printf("Org %s: skipped %d target(s) with only inactive projects", res.orgLabel, res.inactiveSkipped)
+	}
 	if len(res.targets) > 0 {
 		log.Printf("Org %s: %d target(s)", res.orgLabel, len(res.targets))
-	} else if res.gitlabCount == 0 {
+	} else if res.gitlabCount == 0 && res.inactiveSkipped == 0 {
 		log.Printf("Org %s: no SCM projects found", res.orgLabel)
 	}
 	out.Targets = append(out.Targets, res.targets...)
@@ -173,6 +200,7 @@ func runRefresh(args []string) {
 	groupID := fs.String("groupId", "", "Snyk group ID (all orgs in this group will be scanned)")
 	orgID := fs.String("orgId", "", "Single Snyk org ID to scan (alternative to --groupId)")
 	integrationType := fs.String("integrationType", "", "Filter to a specific integration type (e.g. github-cloud-app)")
+	skipInactiveTargets := fs.Bool("skipInactiveTargets", false, "Skip targets where every associated project is inactive")
 	concurrency := fs.Int("concurrency", 5, "Number of orgs to process in parallel")
 	output := fs.String("output", "export-targets.json", "Output file path")
 	if err := fs.Parse(args); err != nil {
@@ -217,7 +245,7 @@ func runRefresh(args []string) {
 			defer wg.Done()
 			sem <- struct{}{}        // acquire
 			defer func() { <-sem }() // release
-			results <- processOrgForRefresh(ctx, api, o, *integrationType)
+			results <- processOrgForRefresh(ctx, api, o, *integrationType, *skipInactiveTargets)
 		}(org)
 	}
 

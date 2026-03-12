@@ -104,6 +104,7 @@ func loadMockProjectsFromTestdata(t *testing.T) []internal.Project {
 				}
 			}
 		}
+		status, _ := attrs["status"].(string)
 		projects = append(projects, internal.Project{
 			ID:              p.ID,
 			Name:            name,
@@ -112,6 +113,7 @@ func loadMockProjectsFromTestdata(t *testing.T) []internal.Project {
 			TargetReference: targetRef,
 			Created:         created,
 			TargetID:        targetID,
+			Status:          status,
 		})
 	}
 	return projects
@@ -226,7 +228,7 @@ func TestProjectsToImportTargets(t *testing.T) {
 		projects := []internal.Project{
 			{Name: "owner/repo", Origin: "gitlab", Branch: "main"},
 		}
-		targets, gitlabCount := projectsToImportTargets(org, projects, integrations, "")
+		targets, gitlabCount, _ := projectsToImportTargets(org, projects, integrations, "", false)
 		if len(targets) != 0 {
 			t.Errorf("got %d targets, want 0 (gitlab should be skipped)", len(targets))
 		}
@@ -239,7 +241,7 @@ func TestProjectsToImportTargets(t *testing.T) {
 		projects := []internal.Project{
 			{Name: "owner/repo:package.json", Origin: "github", Branch: "main"},
 		}
-		targets, gitlabCount := projectsToImportTargets(org, projects, integrations, "")
+		targets, gitlabCount, _ := projectsToImportTargets(org, projects, integrations, "", false)
 		if gitlabCount != 0 {
 			t.Errorf("gitlabCount = %d, want 0", gitlabCount)
 		}
@@ -260,7 +262,7 @@ func TestProjectsToImportTargets(t *testing.T) {
 			{Name: "a/b", Origin: "github", Branch: "main"},
 			{Name: "c/d", Origin: "bitbucket-cloud", Branch: "main"},
 		}
-		targets, _ := projectsToImportTargets(org, projects, integrations, "github")
+		targets, _, _ := projectsToImportTargets(org, projects, integrations, "github", false)
 		if len(targets) != 1 {
 			t.Errorf("filter integrationType=github: got %d targets, want 1", len(targets))
 		}
@@ -274,9 +276,63 @@ func TestProjectsToImportTargets(t *testing.T) {
 		projects := []internal.Project{
 			{Name: "owner/repo", Origin: "bitbucket-cloud", Branch: "main"},
 		}
-		targets, _ := projectsToImportTargets(org, projects, integrations, "")
+		targets, _, _ := projectsToImportTargets(org, projects, integrations, "", false)
 		if len(targets) != 0 {
 			t.Errorf("project with no matching integration should be skipped: got %d targets", len(targets))
+		}
+	})
+
+	t.Run("skipInactiveTargets: all inactive projects omits target", func(t *testing.T) {
+		projects := []internal.Project{
+			{Name: "owner/repo:Makefile", Origin: "github", Branch: "main", Status: "inactive"},
+			{Name: "owner/repo:package.json", Origin: "github", Branch: "main", Status: "inactive"},
+		}
+		targets, _, inactiveSkipped := projectsToImportTargets(org, projects, integrations, "", true)
+		if len(targets) != 0 {
+			t.Errorf("got %d targets, want 0 (all inactive)", len(targets))
+		}
+		if inactiveSkipped != 1 {
+			t.Errorf("inactiveSkipped = %d, want 1", inactiveSkipped)
+		}
+	})
+
+	t.Run("skipInactiveTargets: mixed projects keeps target", func(t *testing.T) {
+		projects := []internal.Project{
+			{Name: "owner/repo:Makefile", Origin: "github", Branch: "main", Status: "inactive"},
+			{Name: "owner/repo:package.json", Origin: "github", Branch: "main", Status: "active"},
+		}
+		targets, _, inactiveSkipped := projectsToImportTargets(org, projects, integrations, "", true)
+		if len(targets) != 1 {
+			t.Errorf("got %d targets, want 1 (has active project)", len(targets))
+		}
+		if inactiveSkipped != 0 {
+			t.Errorf("inactiveSkipped = %d, want 0", inactiveSkipped)
+		}
+	})
+
+	t.Run("skipInactiveTargets false: inactive-only target still included", func(t *testing.T) {
+		projects := []internal.Project{
+			{Name: "owner/repo:package.json", Origin: "github", Branch: "main", Status: "inactive"},
+		}
+		targets, _, inactiveSkipped := projectsToImportTargets(org, projects, integrations, "", false)
+		if len(targets) != 1 {
+			t.Errorf("got %d targets, want 1 (skipInactiveTargets=false)", len(targets))
+		}
+		if inactiveSkipped != 0 {
+			t.Errorf("inactiveSkipped = %d, want 0", inactiveSkipped)
+		}
+	})
+
+	t.Run("skipInactiveTargets: empty status treated as active", func(t *testing.T) {
+		projects := []internal.Project{
+			{Name: "owner/repo:package.json", Origin: "github", Branch: "main", Status: ""},
+		}
+		targets, _, inactiveSkipped := projectsToImportTargets(org, projects, integrations, "", true)
+		if len(targets) != 1 {
+			t.Errorf("got %d targets, want 1 (empty status = active)", len(targets))
+		}
+		if inactiveSkipped != 0 {
+			t.Errorf("inactiveSkipped = %d, want 0", inactiveSkipped)
 		}
 	})
 }
@@ -411,7 +467,7 @@ func TestProcessOrgForRefresh(t *testing.T) {
 			{Name: "owner/repo:package.json", Origin: "github", Branch: "main"},
 		},
 	}
-	res := processOrgForRefresh(ctx, mock, org, "")
+	res := processOrgForRefresh(ctx, mock, org, "", false)
 	if res.err != nil {
 		t.Fatalf("processOrgForRefresh: %v", res.err)
 	}
@@ -432,7 +488,7 @@ func TestProcessOrgForRefresh(t *testing.T) {
 func TestProcessOrgForRefresh_ListIntegrationsError(t *testing.T) {
 	ctx := context.Background()
 	mock := &mockSnykAPI{IntegrationsErr: fmt.Errorf("auth failed")}
-	res := processOrgForRefresh(ctx, mock, internal.Org{ID: "org-1"}, "")
+	res := processOrgForRefresh(ctx, mock, internal.Org{ID: "org-1"}, "", false)
 	if res.err == nil {
 		t.Fatal("want error from ListIntegrations")
 	}
@@ -444,7 +500,7 @@ func TestProcessOrgForRefresh_FetchProjectsError(t *testing.T) {
 		Integrations: map[string]string{},
 		ProjectsErr:  fmt.Errorf("rate limited"),
 	}
-	res := processOrgForRefresh(ctx, mock, internal.Org{ID: "org-1"}, "")
+	res := processOrgForRefresh(ctx, mock, internal.Org{ID: "org-1"}, "", false)
 	if res.err == nil {
 		t.Fatal("want error from FetchProjects")
 	}
@@ -465,7 +521,7 @@ func TestProcessOrgForRefresh_WithTestdataIntegrations(t *testing.T) {
 			{Name: "owner/repo:package.json", Origin: "github", Branch: "main"},
 		},
 	}
-	res := processOrgForRefresh(ctx, mock, org, "")
+	res := processOrgForRefresh(ctx, mock, org, "", false)
 	if res.err != nil {
 		t.Fatalf("processOrgForRefresh: %v", res.err)
 	}
@@ -493,7 +549,7 @@ func TestProcessOrgForRefresh_WithTestdataProjects(t *testing.T) {
 		Integrations: integrations,
 		Projects:     projects,
 	}
-	res := processOrgForRefresh(ctx, mock, org, "")
+	res := processOrgForRefresh(ctx, mock, org, "", false)
 	if res.err != nil {
 		t.Fatalf("processOrgForRefresh: %v", res.err)
 	}
@@ -504,6 +560,31 @@ func TestProcessOrgForRefresh_WithTestdataProjects(t *testing.T) {
 	// Sanity: we got a result with org meta and no error
 	if res.orgID != org.ID || res.orgLabel != "Example Org (example-org)" {
 		t.Errorf("org result: orgID=%q orgLabel=%q", res.orgID, res.orgLabel)
+	}
+}
+
+func TestProcessOrgForRefresh_SkipInactiveTargets(t *testing.T) {
+	ctx := context.Background()
+	org := internal.Org{ID: "org-1", Name: "Test Org", Slug: "test-org"}
+	mock := &mockSnykAPI{
+		Integrations: map[string]string{"github": "int-github"},
+		Projects: []internal.Project{
+			{Name: "owner/active:package.json", Origin: "github", Branch: "main", Status: "active"},
+			{Name: "owner/inactive:package.json", Origin: "github", Branch: "main", Status: "inactive"},
+		},
+	}
+	res := processOrgForRefresh(ctx, mock, org, "", true)
+	if res.err != nil {
+		t.Fatalf("processOrgForRefresh: %v", res.err)
+	}
+	if len(res.targets) != 1 {
+		t.Errorf("targets: got %d, want 1 (inactive-only target skipped)", len(res.targets))
+	}
+	if res.inactiveSkipped != 1 {
+		t.Errorf("inactiveSkipped: got %d, want 1", res.inactiveSkipped)
+	}
+	if len(res.targets) == 1 && res.targets[0].Target.Name != "active" {
+		t.Errorf("target name: got %q, want %q", res.targets[0].Target.Name, "active")
 	}
 }
 
