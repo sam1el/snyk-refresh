@@ -30,14 +30,14 @@ type RefreshOutput struct {
 
 // refreshOrgResult holds the result of processing one org for the refresh command.
 type refreshOrgResult struct {
-	targets        []internal.ImportTarget
-	orgMeta        map[string]OrgMeta
-	intMeta        map[string]string
-	gitlabCount    int
+	targets         []internal.ImportTarget
+	orgMeta         map[string]OrgMeta
+	intMeta         map[string]string
+	gitlabCount     int
 	inactiveSkipped int
-	err            error
-	orgID          string
-	orgLabel       string
+	err             error
+	orgID           string
+	orgLabel        string
 }
 
 // projectsToImportTargets converts Snyk projects to import targets for the given org,
